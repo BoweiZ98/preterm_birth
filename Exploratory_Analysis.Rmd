@@ -1,0 +1,93 @@
+---
+title: "Exploratory"
+author: "Bowei Zhang"
+date: "2024-02-27"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE)
+Sys.setLanguage(lang = "en")
+library(MASS)
+library(tidyverse)
+library(caret)
+library(gtsummary)
+library(medicaldata)
+library(GGally)
+```
+
+# Load Dataset
+
+```{r}
+opt_raw = opt
+
+# Function to replace empty strings with NA in a factor
+replace_empty_with_na <- function(x) {
+  levels(x)[levels(x) == "   "] = NA
+  x
+}
+
+opt_baseline = opt_raw %>%
+  rename(
+    ended_37_wk = Preg.ended...37.wk
+  ) %>%
+  # turn space to NA in ended_37_wk
+  select(
+    # Outcome
+    ended_37_wk, GA.at.outcome, 
+    # Treatment
+    Group,
+    # demographic
+    Age, White, Black, Hisp, Education, Prev.preg, 
+    # Coexisting medical condition
+    Diabetes, Hypertension, Drug.Add, Use.Alc, # eating disorder
+    # dental status ?
+    ## missing number of natural teeth
+    N.qualifying.teeth, BL..BOP, BL.PD.avg
+    #
+  ) %>%
+   mutate(across(where(is.factor), ~na_if(as.character(.), "   ")))
+
+```
+
+```{r}
+baseline_table = tbl_summary(opt_baseline, b = Group)
+add_p(baseline_table, pvalue_fun = function(x) style_pvalue(x, digits = 2))
+```
+
+
+```{r}
+ggplot(data = opt_baseline) +
+  geom_bar(aes(x = ended_37_wk, fill = Group),
+          position = 'dodge') +
+  scale_fill_manual(values = c('darkblue', 'darkred')) +
+  ggtitle("Distribution of Preterm Birth by Treatment Groups") +
+  theme_bw()
+```
+
+```{r}
+opt_outcome = opt_raw %>%
+  rename(ended_37_wk = Preg.ended...37.wk,
+         ) %>%
+  # turn space to NA in ended_37_wk
+  select(
+    # Outcome
+    ended_37_wk, GA.at.outcome, 
+    # Secondary Outcome
+    Birthweight, Pre.eclamp, Birth.outcome, Apgar1, Apgar5, 
+    V5..PD.4, V5..PD.5, #?
+    V5..CAL.2, V5..BOP,
+    # missing: birth length, admission to ICU, 
+    # demographic
+    Age, White, Black, Hisp, Education, Prev.preg, 
+    # Coexisting medical condition
+    Diabetes, Hypertension, Drug.Add, Use.Alc, # eating disorder
+    # dental status ?
+    ## missing number of natural teeth
+    N.qualifying.teeth, BL..BOP, BL.PD.avg
+    #
+  )%>%
+   mutate(across(where(is.factor), ~na_if(as.character(.), "   ")))
+```
+
