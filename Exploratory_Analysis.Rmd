@@ -2,7 +2,9 @@
 title: "Exploratory"
 author: "Bowei Zhang"
 date: "2024-02-27"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -51,8 +53,19 @@ opt_baseline = opt_raw %>%
 
 ```
 
+
 ```{r}
-baseline_table = tbl_summary(opt_baseline, b = Group)
+baseline_table = tbl_summary(opt_baseline, by = Group, missing = "no",
+                             label = list(
+                               ended_37_wk ~ "Whether Ended Before 37 Weeks",
+                               GA.at.outcome ~ "Gestational Age at End of Pregnancy (day)",
+                               Hisp ~ "Hispanic",
+                               Drug.Add ~ "Drug Addiction",
+                               Use.Alc ~ "Alcohol Use",
+                               N.qualifying.teeth ~ "Number of Qualifying Teeth",
+                               BL..BOP ~ "Percent of tooth sites that bled on probing",
+                               BL.PD.avg ~ "Whole-mouth average pocket depth (mm)"
+                             ))
 add_p(baseline_table, pvalue_fun = function(x) style_pvalue(x, digits = 2))
 ```
 
