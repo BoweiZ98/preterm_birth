@@ -1,0 +1,93 @@
+---
+title: "Survival_Analysis"
+author: "Bowei Zhang"
+date: "2024-03-06"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+Sys.setLanguage(lang = 'en')
+library(MASS)
+library(tidyverse)
+library(caret)
+library(gtsummary)
+library(medicaldata)
+library(GGally)
+library(survival)
+library(survminer)
+```
+
+# Load Dataset
+
+## survival dataset
+
+```{r}
+opt_raw = opt
+
+opt_survival = opt_raw %>%
+  # turn space to NA in ended_37_wk
+   mutate(across(where(is.factor), ~na_if(as.character(.), "   "))) %>%
+  rename(
+    ended_37_wk = Preg.ended...37.wk,
+    time = GA.at.outcome
+  ) %>%
+  mutate(
+    status = ifelse(is.na(ended_37_wk), 0, 1)
+  ) %>%
+  select(
+    # Outcome
+    time, status,
+    # Treatment
+    Group,
+    # Center
+    Clinic,
+    # demographic
+    Age, White, Black, Hisp, Education, Prev.preg, 
+    # Coexisting medical condition
+    Diabetes, Hypertension, Drug.Add, Use.Alc, # eating disorder
+    # dental status ?
+    ## missing number of natural teeth
+    N.qualifying.teeth, BL..BOP, BL.PD.avg
+    #
+  )
+  
+```
+
+## Kaplan-Meier Estimate
+
+```{r}
+fit.km = survfit(Surv(time, status) ~ Group, data = opt_survival, conf.type = "log-log")
+ggsurvplot(
+  fit = fit.km,
+  xlab = "Gestational Age (day)",
+  ylab = "Cumulative Percent of Patients",
+  conf.int = T,
+  censor = T,
+  risk.table = T,
+  xlim = c(103, 259),
+  ylim = c(0.85, 1),
+  break.x.by = 20,
+  tables.height = 0.3,
+  pval = T
+)
+```
+
+## Multivariate Cox Regression Analysis
+
+```{r}
+fml = as.formula(
+  paste0(
+    "Surv(time, status) ~ Group + Clinic + ", 
+    # demographic
+    "Age + White + Black + Hisp + Education + Prev.preg +",
+    # Coexisting medical condition
+    "Diabetes + Hypertension + Drug.Add + Use.Alc +",
+    # dental status 
+    "N.qualifying.teeth + BL..BOP + BL.PD.avg"
+  )
+)
+fit.cox = coxph(formula = fml, data = opt_survival)
+summary(fit.cox)
+```
+

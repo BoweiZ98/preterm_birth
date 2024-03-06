@@ -24,12 +24,6 @@ library(GGally)
 ```{r}
 opt_raw = opt
 
-# Function to replace empty strings with NA in a factor
-replace_empty_with_na <- function(x) {
-  levels(x)[levels(x) == "   "] = NA
-  x
-}
-
 opt_baseline = opt_raw %>%
   rename(
     ended_37_wk = Preg.ended...37.wk
