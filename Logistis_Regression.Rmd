@@ -28,6 +28,10 @@ library(medicaldata)
 library(knitr)
 library(kableExtra)
 
+# --- Notes --- 
+
+# Remember this is a Clinical Trial we do not need to backward selection
+
 
 
 ```
@@ -36,6 +40,9 @@ library(kableExtra)
 ```{r}
 
 opt_raw = opt
+
+opt_raw$Preg.ended...37.wk <- as.factor(opt_raw$Preg.ended...37.wk)
+  
 
 opt_baseline = opt_raw %>%
   rename(
@@ -84,14 +91,57 @@ opt_outcome = opt_raw %>%
     N.qualifying.teeth, BL..BOP, BL.PD.avg
     #
   )%>%
-   mutate(across(where(is.factor), ~na_if(as.character(.), "   ")))
+   mutate(
+     ended_37_wk = as.factor(ended_37_wk),
+     cat_birthweight = factor(ifelse(Birthweight < 2500, 0, 1), 
+                              levels = c(0, 1)),
+     across(where(is.factor), ~na_if(as.character(.), "   "))
+   )
 ```
 
 
 ### Logistic Regression
-```{r}
 
-m1 <- 
+#### Part 1 - Preterm or Not Preterm
+
+#### Model Fitting 
+```{r, echo=FALSE}
+
+
+# --- Fit Base Model ---
+
+# Convert to factor with explicit levels
+opt_outcome$ended_37_wk <- factor(opt_outcome$ended_37_wk, levels = c("No", "Yes"))
+
+# Check the levels
+table(opt_outcome$ended_37_wk)
+
+# Check the levels
+class(opt_outcome$ended_37_wk)
+  
+model.preterm <- glm(ended_37_wk ~ . - GA.at.outcome, data = opt_outcome, 
+          family = binomial, na.action = na.exclude)
+
+summary(m1)
+
+# --- Variable Selection --- 
+
+# Backward Selection AIC? 
+
+
+
+```
+
+
+#### Part 2 - Birthweight 
+
+```{r, echo=FALSE}
+
+opt_outcome$cat_birthweight <- as.factor(opt_outcome$cat_birthweight)
+
+model.birthweight <- glm(cat_birthweight ~ . - ended_37_wk - GA.at.outcome, 
+                         data = opt_outcome, family = binomial, 
+                         na.action = na.exclude)
 
 
 ```
