@@ -41,62 +41,28 @@ library(kableExtra)
 
 opt_raw = opt
 
-opt_raw$Preg.ended...37.wk <- as.factor(opt_raw$Preg.ended...37.wk)
+opt_logistic <- opt_raw %>%
+  # turn space to NA in ended_37_wk
+  mutate(
+    cat_birthweight = factor(ifelse(Birthweight < 2500, 0, 1), 
+                             levels = c(0, 1)),
+    across(where(is.factor), ~na_if(as.character(.), "   "))
+  ) %>%
+  select(
+    # Outcome
+    Preg.ended...37.wk, cat_birthweight,
+    # Center
+    Clinic,
+    # demographic
+    Age, White, Black, Hisp, Education, Prev.preg, 
+    # Coexisting medical condition
+    Diabetes, Hypertension, Drug.Add, Use.Alc, # eating disorder
+    # dental status ?
+    ## missing number of natural teeth
+    N.qualifying.teeth, BL..BOP, BL.PD.avg
+  )
   
-
-opt_baseline = opt_raw %>%
-  rename(
-    ended_37_wk = Preg.ended...37.wk
-  ) %>%
-  # turn space to NA in ended_37_wk
-  select(
-    # Outcome
-    ended_37_wk, GA.at.outcome, 
-    # Treatment
-    Group,
-    # demographic
-    Age, White, Black, Hisp, Education, Prev.preg, 
-    # Coexisting medical condition
-    Diabetes, Hypertension, Drug.Add, Use.Alc, # eating disorder
-    # dental status ?
-    ## missing number of natural teeth
-    N.qualifying.teeth, BL..BOP, BL.PD.avg
-    #
-  ) %>%
-   mutate(across(where(is.factor), ~na_if(as.character(.), "   ")))
-
-
-
-# ---
-# Below is the data set for analysis
-
-opt_outcome = opt_raw %>%
-  rename(ended_37_wk = Preg.ended...37.wk,
-         ) %>%
-  # turn space to NA in ended_37_wk
-  select(
-    # Outcome
-    ended_37_wk, GA.at.outcome, 
-    # Secondary Outcome
-    Birthweight, Pre.eclamp, Birth.outcome, Apgar1, Apgar5, 
-    V5..PD.4, V5..PD.5, #?
-    V5..CAL.2, V5..BOP,
-    # missing: birth length, admission to ICU, 
-    # demographic
-    Age, White, Black, Hisp, Education, Prev.preg, 
-    # Coexisting medical condition
-    Diabetes, Hypertension, Drug.Add, Use.Alc, # eating disorder
-    # dental status ?
-    ## missing number of natural teeth
-    N.qualifying.teeth, BL..BOP, BL.PD.avg
-    #
-  )%>%
-   mutate(
-     ended_37_wk = as.factor(ended_37_wk),
-     cat_birthweight = factor(ifelse(Birthweight < 2500, 0, 1), 
-                              levels = c(0, 1)),
-     across(where(is.factor), ~na_if(as.character(.), "   "))
-   )
+table(opt_logistic$Preg.ended...37.wk)
 ```
 
 
@@ -109,20 +75,11 @@ opt_outcome = opt_raw %>%
 
 
 # --- Fit Base Model ---
-
-# Convert to factor with explicit levels
-opt_outcome$ended_37_wk <- factor(opt_outcome$ended_37_wk, levels = c("No", "Yes"))
-
-# Check the levels
-table(opt_outcome$ended_37_wk)
-
-# Check the levels
-class(opt_outcome$ended_37_wk)
   
-model.preterm <- glm(ended_37_wk ~ . - GA.at.outcome, data = opt_outcome, 
+model.preterm <- glm(as.factor(Preg.ended...37.wk) ~ . - cat_birthweight, data = opt_logistic, 
           family = binomial, na.action = na.exclude)
 
-summary(m1)
+summary(model.preterm)
 
 # --- Variable Selection --- 
 
@@ -137,11 +94,13 @@ summary(m1)
 
 ```{r, echo=FALSE}
 
-opt_outcome$cat_birthweight <- as.factor(opt_outcome$cat_birthweight)
+opt_logistic$cat_birthweight <- as.factor(opt_logistic$cat_birthweight)
 
-model.birthweight <- glm(cat_birthweight ~ . - ended_37_wk - GA.at.outcome, 
-                         data = opt_outcome, family = binomial, 
+model.birthweight <- glm(cat_birthweight ~ . - Preg.ended...37.wk , 
+                         data = opt_logistic, family = binomial, 
                          na.action = na.exclude)
+
+summary(model.birthweight)
 
 
 ```
