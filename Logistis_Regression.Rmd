@@ -1,0 +1,98 @@
+---
+title: "Preterm - Birth"
+subtitle: "Logistic Regression"
+author: "R.G. Thomas"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+fontsize: 11pt
+geometry: "left=3cm,right=5cm,top=2cm,bottom=2cm"
+output:
+  pdf_document:
+    toc: true
+    number_sections: true
+    highlight: tango
+    keep_tex: true 
+---    
+    
+
+```{r global_options, include=FALSE}
+# these are some optional settings that will change how some features look
+# you do not need to change them.
+knitr::opts_chunk$set(out.width = "50%", out.height="50%", fig.align="center", warning=FALSE, message=FALSE)
+```
+
+
+```{r, echo=FALSE}
+
+library(tidyverse)
+library(medicaldata)
+library(knitr)
+library(kableExtra)
+
+
+
+```
+
+### Data Cleaning 
+```{r}
+
+opt_raw = opt
+
+opt_baseline = opt_raw %>%
+  rename(
+    ended_37_wk = Preg.ended...37.wk
+  ) %>%
+  # turn space to NA in ended_37_wk
+  select(
+    # Outcome
+    ended_37_wk, GA.at.outcome, 
+    # Treatment
+    Group,
+    # demographic
+    Age, White, Black, Hisp, Education, Prev.preg, 
+    # Coexisting medical condition
+    Diabetes, Hypertension, Drug.Add, Use.Alc, # eating disorder
+    # dental status ?
+    ## missing number of natural teeth
+    N.qualifying.teeth, BL..BOP, BL.PD.avg
+    #
+  ) %>%
+   mutate(across(where(is.factor), ~na_if(as.character(.), "   ")))
+
+
+
+# ---
+# Below is the data set for analysis
+
+opt_outcome = opt_raw %>%
+  rename(ended_37_wk = Preg.ended...37.wk,
+         ) %>%
+  # turn space to NA in ended_37_wk
+  select(
+    # Outcome
+    ended_37_wk, GA.at.outcome, 
+    # Secondary Outcome
+    Birthweight, Pre.eclamp, Birth.outcome, Apgar1, Apgar5, 
+    V5..PD.4, V5..PD.5, #?
+    V5..CAL.2, V5..BOP,
+    # missing: birth length, admission to ICU, 
+    # demographic
+    Age, White, Black, Hisp, Education, Prev.preg, 
+    # Coexisting medical condition
+    Diabetes, Hypertension, Drug.Add, Use.Alc, # eating disorder
+    # dental status ?
+    ## missing number of natural teeth
+    N.qualifying.teeth, BL..BOP, BL.PD.avg
+    #
+  )%>%
+   mutate(across(where(is.factor), ~na_if(as.character(.), "   ")))
+```
+
+
+### Logistic Regression
+```{r}
+
+m1 <- 
+
+
+```
+
