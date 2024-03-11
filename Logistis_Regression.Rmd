@@ -27,6 +27,7 @@ library(tidyverse)
 library(medicaldata)
 library(knitr)
 library(kableExtra)
+library(car)
 
 # --- Notes --- 
 
@@ -35,6 +36,7 @@ library(kableExtra)
 
 
 ```
+In this part of the analysis, we are focusing on two secondary outcomes which are if the pregnancy happened "In this phase of the analysis, we concentrate on two secondary outcomes: preterm birth, defined as delivery before 37 weeks, and low birthweight, with the threshold set at below 2500g. It's essential to note that these outcomes are secondary in the context of the clinical trial, where the power calculation was based on gestational age at delivery. This serves as a reminder that our statistical power might be limited for these secondary outcomes, potentially impacting our ability to detect statistical significance.
 
 ### Data Cleaning 
 ```{r}
@@ -62,7 +64,7 @@ opt_logistic <- opt_raw %>%
     N.qualifying.teeth, BL..BOP, BL.PD.avg
   )
   
-table(opt_logistic$Preg.ended...37.wk)
+
 ```
 
 
@@ -70,24 +72,45 @@ table(opt_logistic$Preg.ended...37.wk)
 
 #### Part 1 - Preterm or Not Preterm
 
-#### Model Fitting 
+##### Model Fitting 
 ```{r, echo=FALSE}
 
 
 # --- Fit Base Model ---
   
-model.preterm <- glm(as.factor(Preg.ended...37.wk) ~ . - cat_birthweight, data = opt_logistic, 
+model.preterm <- glm(as.factor(Preg.ended...37.wk) ~ . - cat_birthweight, 
+                     data = opt_logistic, 
           family = binomial, na.action = na.exclude)
 
-summary(model.preterm)
+model.preterm.summary <- summary(model.preterm)
+model.preterm.summary$coefficients %>% 
+  round(digits = 3) %>% kable()
 
 # --- Variable Selection --- 
 
-# Backward Selection AIC? 
+model.preterm.reduced <- glm(as.factor(Preg.ended...37.wk) ~ . - 
+                               cat_birthweight - Drug.Add - Use.Alc , 
+                             data = opt_logistic, 
+          family = binomial, na.action = na.exclude)
 
-
+model.preterm.reduced.summary <- summary(model.preterm.reduced)
+model.preterm.reduced.summary$coefficients %>% 
+  round(digits = 3) %>% kable()
 
 ```
+We have two models above. The bigger model has these variables **Clinic**, **Age**, **Ethnicity**, **Education**, **Number of previous pregnancies**, **Diabetes**, **Hypertension**, **Alcohol use**, **Number of qualifying teeth**, **Percentage of sites bleeding on probing at baseline**, **Whole-mouth average pocket depth at baseline (mm)**, **Self-reported participant history of drug addiction** and **Self-reported participants history of alcohol use**. The reduced model does not have drug addiction and alcohol use variables. 
+
+
+
+```{r, echo=FALSE}
+anova(model.preterm, model.preterm.reduced, test = "LRT")
+
+compareCoefs(model.preterm,model.preterm.reduced)
+```
+
+
+When looking at the bigger model, the 
+
 
 
 #### Part 2 - Birthweight 
