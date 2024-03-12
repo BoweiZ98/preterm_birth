@@ -16,9 +16,11 @@ library(medicaldata)
 library(GGally)
 library(survival)
 library(survminer)
+library(mice)
+library(ggfortify)
 ```
 
-# Load Dataset
+# Data Wrangling
 
 ## survival dataset
 
@@ -50,9 +52,30 @@ opt_survival = opt_raw %>%
     ## missing number of natural teeth
     N.qualifying.teeth, BL..BOP, BL.PD.avg
     #
-  )
+  ) %>%
+  mutate_if(is.character, as.factor)
+
   
 ```
+
+
+## Missing Value Imputation
+
+```{r}
+colSums(is.na(opt_survival))/nrow(opt_survival)
+```
+
+```{r, error=FALSE, warning=FALSE, message=FALSE}
+imputation = mice(
+  opt_survival,
+  m = 10,
+  maxit = 10,
+  seed = 1,
+  method = "pmm"
+)
+opt_survival = complete(imputation,1)
+```
+
 
 ## Kaplan-Meier Estimate
 
@@ -90,4 +113,9 @@ fml = as.formula(
 fit.cox = coxph(formula = fml, data = opt_survival)
 summary(fit.cox)
 ```
+
+```{r}
+
+```
+
 

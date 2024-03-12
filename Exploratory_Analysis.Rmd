@@ -31,9 +31,11 @@ opt_baseline = opt_raw %>%
   # turn space to NA in ended_37_wk
   select(
     # Outcome
-    ended_37_wk, GA.at.outcome, 
+    ended_37_wk, GA.at.outcome, Birthweight,
     # Treatment
     Group,
+    # Clinics
+    Clinic,
     # demographic
     Age, White, Black, Hisp, Education, Prev.preg, 
     # Coexisting medical condition
@@ -49,6 +51,7 @@ opt_baseline = opt_raw %>%
 
 
 ```{r}
+# Note: The format is good in HTML but odd in pdf
 baseline_table = tbl_summary(opt_baseline, by = Group, missing = "no",
                              label = list(
                                ended_37_wk ~ "Whether Ended Before 37 Weeks",

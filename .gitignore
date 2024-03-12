@@ -50,3 +50,6 @@ rsconnect/
 
 # pdf output
 *.pdf
+
+# html output
+*.html
