@@ -59,6 +59,7 @@ library(knitr)
 library(kableExtra)
 library(car)
 library(logistf)
+library(ResourceSelection)
 
 # --- Notes --- 
 
@@ -162,13 +163,30 @@ We also checked the coefficients of both models to see if there is any significa
 ##### Final Model
 ```{r, echo=FALSE}
 
-opt_logistic$Preg.ended...37.wk <- as.factor(opt_logistic$Preg.ended...37.wk )
+# --- Notes ---
+# I am encountering errors here. It has to do with NAs in the data set. 
+# We might have to impute? 
 
-generalhoslem::logitgof(opt_logistic$Preg.ended...37.wk, 
-                        model.preterm.reduced$fitted.values)
+# length(opt_logistic$Preg.ended...37.wk) ---> N = 823 
+# length(model.preterm.reduced$fitted.values) ---> N = 655
+# 
+
+
+# --- Goodness of Fit ---
+
+
+# opt_logistic$Preg.ended...37.wk <- as.factor(opt_logistic$Preg.ended...37.wk )
+
+# generalhoslem::logitgof(opt_logistic$Preg.ended...37.wk, 
+#                         model.preterm.reduced$fitted.values)
+
+# hoslem.test(model.preterm.reduced$fitted.values,
+#             opt_logistic$Preg.ended...37.wk)
+
+# --- Outlier Test ---
+plot(model.preterm.reduced$fitted.values, rstandard(model.preterm.reduced))
 
 ```
-
 
 
 
