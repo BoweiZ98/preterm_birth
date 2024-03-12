@@ -60,7 +60,7 @@ library(kableExtra)
 library(car)
 library(logistf)
 library(ResourceSelection)
-
+library(mice)
 # --- Notes --- 
 
 # Remember this is a Clinical Trial we do not need to backward selection
@@ -99,9 +99,26 @@ opt_logistic <- opt_raw %>%
     # dental status ?
     ## missing number of natural teeth
     N.qualifying.teeth, BL..BOP, BL.PD.avg
-  )
-  
+  )  %>%
+  mutate_if(is.character, as.factor)
+```
 
+### Missing Value Imputation
+```{r}
+colSums(is.na(opt_logistic))/nrow(opt_logistic)
+
+opt_logistic = opt_logistic %>%
+  # delete missing outcome
+  filter(!is.na(Preg.ended...37.wk) & !is.na(cat_birthweight))
+
+imputation = mice(
+  opt_logistic,
+  m = 10,
+  maxit = 10,
+  seed = 1,
+  method = "pmm"
+)
+opt_logistic = complete(imputation,1)
 ```
 
 
