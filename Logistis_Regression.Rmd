@@ -21,6 +21,36 @@ knitr::opts_chunk$set(out.width = "50%", out.height="50%", fig.align="center", w
 ```
 
 
+```{r, include=FALSE}
+
+
+hoslem=function (obs, pred, g = 0)
+  {
+  if (g == 0)
+  g = round(min(length(obs)/10, 10))
+  ord <- order(pred)
+  obs.o <- obs[ord]
+  pred.o <- pred[ord]
+  interval = cut(pred.o, quantile(pred.o, 0:g/g), include.lowest = TRUE)
+  counts = xtabs(formula = cbind(obs.o, pred.o) ~ interval)
+  centers <- aggregate(formula = pred.o ~ interval, FUN = "mean")
+  pear.res <- (counts[, "obs.o"] - counts[, "pred.o"])/sqrt(counts[,
+  "pred.o"])
+  pearson <- sum(pear.res^2)
+  if (any(counts[, "pred.o"] < 5))
+  warning("Some expected counts are less than 5. Use smaller number of groups")
+  p = 1 - pchisq(pearson, g - 2)
+  results <- as.data.frame(cbind(counts[, "obs.o"], counts[,
+  "pred.o"], centers$pred.o, pear.res))
+  colnames(results) <- c("obs.o", "pred.o", "avg mean", "pearson resid")
+  cat("Hosmer-Lemeshow test with", g, "bins", "\n", "Pearson Stat = ",
+  pearson, "\n", "p = ", p, "\n \n")
+  return(results)
+  }
+
+```
+
+
 ```{r, echo=FALSE}
 
 library(tidyverse)
@@ -28,15 +58,21 @@ library(medicaldata)
 library(knitr)
 library(kableExtra)
 library(car)
+library(logistf)
 
 # --- Notes --- 
 
 # Remember this is a Clinical Trial we do not need to backward selection
 
+# --- Referrences ---
+# Soneji S, Beltrán-Sánchez H. Association of Maternal Cigarette Smoking and Smoking Cessation With Preterm Birth. JAMA Netw Open. 2019;2(4):e192514. doi:10.1001/jamanetworkopen.2019.2514
+
 
 
 ```
-In this part of the analysis, we are focusing on two secondary outcomes which are if the pregnancy happened "In this phase of the analysis, we concentrate on two secondary outcomes: preterm birth, defined as delivery before 37 weeks, and low birthweight, with the threshold set at below 2500g. It's essential to note that these outcomes are secondary in the context of the clinical trial, where the power calculation was based on gestational age at delivery. This serves as a reminder that our statistical power might be limited for these secondary outcomes, potentially impacting our ability to detect statistical significance.
+In this phase of the analysis, we concentrate on two secondary outcomes: preterm birth, defined as delivery before 37 weeks, and low birthweight, with the threshold set at below 2500g. It's essential to note that these outcomes are secondary in the context of the clinical trial, where the power calculation was based on gestational age at delivery. This serves as a reminder that our statistical power might be limited for these secondary outcomes, potentially impacting our ability to detect statistical significance.
+
+We are specifically interested in what preterm  birth and low birthweight is associated with. 
 
 ### Data Cleaning 
 ```{r}
@@ -58,7 +94,7 @@ opt_logistic <- opt_raw %>%
     # demographic
     Age, White, Black, Hisp, Education, Prev.preg, 
     # Coexisting medical condition
-    Diabetes, Hypertension, Drug.Add, Use.Alc, # eating disorder
+    Diabetes, Hypertension, Drug.Add, Use.Alc, Use.Tob, # eating disorder
     # dental status ?
     ## missing number of natural teeth
     N.qualifying.teeth, BL..BOP, BL.PD.avg
@@ -89,7 +125,7 @@ model.preterm.summary$coefficients %>%
 # --- Variable Selection --- 
 
 model.preterm.reduced <- glm(as.factor(Preg.ended...37.wk) ~ . - 
-                               cat_birthweight - Drug.Add - Use.Alc , 
+                               cat_birthweight - Drug.Add - Use.Alc  - Use.Tob, 
                              data = opt_logistic, 
           family = binomial, na.action = na.exclude)
 
@@ -98,18 +134,41 @@ model.preterm.reduced.summary$coefficients %>%
   round(digits = 3) %>% kable()
 
 ```
-We have two models above. The bigger model has these variables **Clinic**, **Age**, **Ethnicity**, **Education**, **Number of previous pregnancies**, **Diabetes**, **Hypertension**, **Alcohol use**, **Number of qualifying teeth**, **Percentage of sites bleeding on probing at baseline**, **Whole-mouth average pocket depth at baseline (mm)**, **Self-reported participant history of drug addiction** and **Self-reported participants history of alcohol use**. The reduced model does not have drug addiction and alcohol use variables. 
+We have two models above. The bigger model has these variables **Clinic**, **Age**, **Ethnicity**, **Education**, **Number of previous pregnancies**, **Diabetes**, **Hypertension**, **Alcohol use**, **Number of qualifying teeth**, **Percentage of sites bleeding on probing at baseline**, **Whole-mouth average pocket depth at baseline (mm)**, **Self-reported participant history of drug addiction** and **Self-reported participants history of alcohol use**. The reduced model does not have drug addiction and alcohol use variables. We are just curious if these vices are contributing to these secoundary outcomes in the sample.
 
 
 
 ```{r, echo=FALSE}
 anova(model.preterm, model.preterm.reduced, test = "LRT")
 
-compareCoefs(model.preterm,model.preterm.reduced)
+```
+- $H_{0}$: There is no statistical difference between the reduced and full model.
+- $H_{A}$: There is statistical difference between the reduced and full model. 
+- P-value: 0.508
+- We fail to reject the null hypothesis at significance level 0.05.
+- The full model does not perform better and we decided to go with the simpler model that does not have alcohol, drug and tobacco use. 
+
+
+
+```{r, echo=FALSE}
+compareCoefs(model.preterm,model.preterm.reduced) %>% kable()
 ```
 
 
-When looking at the bigger model, the 
+We also checked the coefficients of both models to see if there is any significant change. As we can see from the table above, the coefficients do not change are within the standard errors.  
+
+
+
+##### Final Model
+```{r, echo=FALSE}
+
+opt_logistic$Preg.ended...37.wk <- as.factor(opt_logistic$Preg.ended...37.wk )
+
+generalhoslem::logitgof(opt_logistic$Preg.ended...37.wk, 
+                        model.preterm.reduced$fitted.values)
+
+```
+
 
 
 
