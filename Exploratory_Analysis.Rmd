@@ -31,7 +31,7 @@ opt_baseline = opt_raw %>%
   # turn space to NA in ended_37_wk
   select(
     # Outcome
-    ended_37_wk, GA.at.outcome, Birthweight,
+    ended_37_wk, GA.at.outcome, Birthweight, Apgar5, 
     # Treatment
     Group,
     # Clinics
