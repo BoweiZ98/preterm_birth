@@ -152,17 +152,19 @@ model.preterm.reduced.summary$coefficients %>%
   round(digits = 3) %>% kable()
 
 ```
-We have two models above. The bigger model has these variables **Clinic**, **Age**, **Ethnicity**, **Education**, **Number of previous pregnancies**, **Diabetes**, **Hypertension**, **Alcohol use**, **Number of qualifying teeth**, **Percentage of sites bleeding on probing at baseline**, **Whole-mouth average pocket depth at baseline (mm)**, **Self-reported participant history of drug addiction** and **Self-reported participants history of alcohol use**. The reduced model does not have drug addiction and alcohol use variables. We are just curious if these vices are contributing to these secoundary outcomes in the sample.
+We have two models above. The bigger model has these variables **Clinic**, **Age**, **Ethnicity**, **Education**, **Number of previous pregnancies**, **Diabetes**, **Hypertension**, **Alcohol use**, **Number of qualifying teeth**, **Percentage of sites bleeding on probing at baseline**, **Whole-mouth average pocket depth at baseline (mm)**, **Self-reported participant history of drug addiction** and **Self-reported participants history of alcohol use**. The reduced model does not have drug addiction and alcohol use variables. We are just curious if these vices are contributing to these secondary outcomes in the sample. 
 
 
 
+##### Likelihood Ratio Test
 ```{r, echo=FALSE}
-anova(model.preterm, model.preterm.reduced, test = "LRT")
+anova(model.preterm.reduced, model.preterm, 
+      test = "LRT")
 
 ```
 - $H_{0}$: There is no statistical difference between the reduced and full model.
 - $H_{A}$: There is statistical difference between the reduced and full model. 
-- P-value: 0.508
+- P-value: 0.878
 - We fail to reject the null hypothesis at significance level 0.05.
 - The full model does not perform better and we decided to go with the simpler model that does not have alcohol, drug and tobacco use. 
 
@@ -179,14 +181,6 @@ We also examined the coefficients of both models to determine if there were any 
 
 ##### Final Model
 ```{r, echo=FALSE}
-
-# --- Notes ---
-# I am encountering errors here. It has to do with NAs in the data set. 
-# We might have to impute? 
-
-# length(opt_logistic$Preg.ended...37.wk) ---> N = 823 
-# length(model.preterm.reduced$fitted.values) ---> N = 655
-# 
 
 
 # --- Goodness of Fit ---
@@ -214,6 +208,7 @@ outlierTest(model.preterm.reduced)
 
 ##### Conclusion 
 - Interpretations:
+  - Intercept is not interpretable because age will never be zero and qualifying teeth will almost never be zero. 
   - Individuals with **hypertension (HypertensionY = Yes)** are estimated to have approximately 4.28 times higher odds of experiencing preterm birth compared to those without hypertension, controlling for other variables in the model.
   - Individuals with **diabetes (DiabetesYes  = Yes)** are estimated to have approximately 2.82 times higher odds of experiencing preterm birth compared to those without hypertension, controlling for other variables in the model.
 
@@ -223,14 +218,66 @@ outlierTest(model.preterm.reduced)
 
 ```{r, echo=FALSE}
 
+
+#cat_birthweight -> Reference level is 0 meaning low birthweight. 
+
+# --- Full Model ---
+
 opt_logistic$cat_birthweight <- as.factor(opt_logistic$cat_birthweight)
 
 model.birthweight <- glm(cat_birthweight ~ . - Preg.ended...37.wk , 
                          data = opt_logistic, family = binomial, 
                          na.action = na.exclude)
 
-summary(model.birthweight)
+model.birthweight.summary <- summary(model.birthweight)
+model.birthweight.summary$coefficients %>% 
+  round(digits = 3) %>% kable()
 
+# --- Reduced Model ---
+
+model.birthweight.reduced <- glm(cat_birthweight ~ . - Preg.ended...37.wk 
+                         - Drug.Add - Use.Alc - Use.Tob, 
+                         data = opt_logistic, family = binomial, 
+                         na.action = na.exclude)
+
+model.birthweight.reduced.summary <- summary(model.birthweight.reduced)
+model.birthweight.reduced.summary$coefficients %>% 
+  round(digits = 3) %>% kable()
 
 ```
 
+
+##### Likelihood Ratio Test
+```{r, echo=FALSE}
+
+anova(model.birthweight.reduced,model.birthweight
+      , test = "LRT")
+
+```
+- $H_{0}$: There is no statistical difference between the reduced and full model.
+- $H_{A}$: There is statistical difference between the reduced and full model. 
+- P-value: 0.341
+- We fail to reject the null hypothesis at significance level 0.05.
+- The full model does not perform better and we decided to go with the simpler model that does not have alcohol, drug and tobacco use. 
+
+##### Final Model
+```{r, echo=FALSE}
+
+
+# --- Goodness of Fit ---
+
+
+generalhoslem::logitgof(opt_logistic$cat_birthweight,
+                       model.birthweight.reduced$fitted.values)
+
+```
+- We are using a Hosmer-Lemeshow for Goodness-of-Fit
+- $H_{0}$: There is no significant difference between the observed and expected values of the binary response variable across different groups or categories defined by the predictor variables.
+- $H_{A}$: There is a significant difference between the observed and expected values of the binary response variable across different groups or categories defined by the predictor variables.
+- We fail to reject the null hypothesis at a significance level of 0.05. This suggests that the model fits well.
+
+##### Conclusion 
+- Interpretations:
+  - Intercept is not interpretable because age will never be zero and qualifying teeth will almost never be zero. 
+  - When an individual has hypertension (compared to its absence), the odds of having a birthweight above 2500g are approximately 0.2746 times the odds of having a birthweight below 2500g, with other variables held constant.
+  - Another way to put this is it  that the odds of having a birthweight above 2500g (compared to below 2500g) are lower for individuals with hypertension compared to those without hypertension. 
