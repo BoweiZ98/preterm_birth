@@ -39,7 +39,7 @@ opt_baseline = opt_raw %>%
     # demographic
     Age, White, Black, Hisp, Education, Prev.preg, 
     # Coexisting medical condition
-    Diabetes, Hypertension, Drug.Add, Use.Alc, # eating disorder
+    Diabetes, Hypertension, Drug.Add, Use.Alc, Use.Tob, # eating disorder
     # dental status ?
     ## missing number of natural teeth
     N.qualifying.teeth, BL..BOP, BL.PD.avg
@@ -59,6 +59,7 @@ baseline_table = tbl_summary(opt_baseline, by = Group, missing = "no",
                                Hisp ~ "Hispanic",
                                Drug.Add ~ "Drug Addiction",
                                Use.Alc ~ "Alcohol Use",
+                               Use.Tob ~ "Tobacco Use",
                                N.qualifying.teeth ~ "Number of Qualifying Teeth",
                                BL..BOP ~ "Percent of tooth sites that bled on probing",
                                BL.PD.avg ~ "Whole-mouth average pocket depth (mm)"
@@ -67,7 +68,7 @@ add_p(baseline_table, pvalue_fun = function(x) style_pvalue(x, digits = 2))
 ```
 
 
-```{r}
+```{r, eval=FALSE}
 ggplot(data = opt_baseline) +
   geom_bar(aes(x = ended_37_wk, fill = Group),
           position = 'dodge') +
