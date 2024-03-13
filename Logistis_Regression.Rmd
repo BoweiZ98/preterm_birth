@@ -1,7 +1,7 @@
 ---
 title: "Preterm - Birth"
 subtitle: "Logistic Regression"
-author: "R.G. Thomas"
+author: "Jomel Meeko Manzano"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 fontsize: 11pt
 geometry: "left=3cm,right=5cm,top=2cm,bottom=2cm"
@@ -173,7 +173,7 @@ compareCoefs(model.preterm,model.preterm.reduced) %>% kable()
 ```
 
 
-We also checked the coefficients of both models to see if there is any significant change. As we can see from the table above, the coefficients do not change are within the standard errors.  
+We also examined the coefficients of both models to determine if there were any significant changes. As depicted in the table above, the coefficients remain stable and fall within the standard errors. Additionally, there are no coefficients that have changed signs.
 
 
 
@@ -192,18 +192,30 @@ We also checked the coefficients of both models to see if there is any significa
 # --- Goodness of Fit ---
 
 
-# opt_logistic$Preg.ended...37.wk <- as.factor(opt_logistic$Preg.ended...37.wk )
+opt_logistic$Preg.ended...37.wk <- as.factor(opt_logistic$Preg.ended...37.wk )
 
-# generalhoslem::logitgof(opt_logistic$Preg.ended...37.wk, 
-#                         model.preterm.reduced$fitted.values)
+generalhoslem::logitgof(opt_logistic$Preg.ended...37.wk,
+                       model.preterm.reduced$fitted.values)
 
-# hoslem.test(model.preterm.reduced$fitted.values,
-#             opt_logistic$Preg.ended...37.wk)
+# student residuals
 
-# --- Outlier Test ---
-plot(model.preterm.reduced$fitted.values, rstandard(model.preterm.reduced))
+std.res <- rstandard(model.preterm.reduced) # student residual
+std.res[std.res == max(std.res)] 
+
+# Outlier Test
+outlierTest(model.preterm.reduced)
 
 ```
+- We are using a Hosmer-Lemeshow for Goodness-of-Fit
+- $H_{0}$: There is no significant difference between the observed and expected values of the binary response variable across different groups or categories defined by the predictor variables.
+- $H_{A}$: There is a significant difference between the observed and expected values of the binary response variable across different groups or categories defined by the predictor variables.
+- We fail to reject the null hypothesis at a significance level of 0.05. This suggests that the model fits well.
+- We also conducted an outlier test to identify any data points that may be influencing our model. We observed that participant 121 had a high studentized residual; however, this outlier was only present in one out of 809 participants and is unlikely to significantly impact our analysis.
+
+##### Conclusion 
+- Interpretations:
+  - Individuals with **hypertension (HypertensionY = Yes)** are estimated to have approximately 4.28 times higher odds of experiencing preterm birth compared to those without hypertension, controlling for other variables in the model.
+  - Individuals with **diabetes (DiabetesYes  = Yes)** are estimated to have approximately 2.82 times higher odds of experiencing preterm birth compared to those without hypertension, controlling for other variables in the model.
 
 
 
