@@ -96,6 +96,15 @@ ggsurvplot(
 )
 ```
 
+## Log Rank Test
+
+```{r}
+surv_diff = survdiff(Surv(time, status) ~ Group,
+                     data = opt_survival)
+surv_diff
+```
+
+
 ## Multivariate Cox Regression Analysis
 
 ```{r}
@@ -110,6 +119,7 @@ fml = as.formula(
     "N.qualifying.teeth + BL..BOP + BL.PD.avg"
   )
 )
+opt_survival$Clinic = relevel(opt_survival$Clinic, ref = "MN") 
 fit.cox = coxph(formula = fml, data = opt_survival)
 (s.fit.cox = summary(fit.cox))
 ```
