@@ -63,7 +63,7 @@ library(generalhoslem)
 opt_raw = opt
 
 opt_baseline = opt_raw %>%
-  rename(
+  dplyr::rename(
     ended_37_wk = Preg.ended...37.wk
   ) %>%
   # turn space to NA in ended_37_wk
@@ -114,7 +114,7 @@ opt_raw = opt
 opt_survival = opt_raw %>%
   # turn space to NA in ended_37_wk
    mutate(across(where(is.factor), ~na_if(as.character(.), "   "))) %>%
-  rename(
+  dplyr::rename(
     ended_37_wk = Preg.ended...37.wk,
     time = GA.at.outcome
   ) %>%
