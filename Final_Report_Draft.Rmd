@@ -340,7 +340,7 @@ kable(round(table,2))
 
 ## Conclusion
 
-It was found that the nonsurgical treatment of periodontal disease in pregnant women before 21 weeks of gestation did not significantly alter the risk of premature birth before 37 weeks. It was also found that periodontal treatment is not associated with low-birth rates or Apgar scores indicating the well-being of a newborn. These results are consistent with the results found in the Michalowicz et al. (2006) study.
+In conclusion, our analysis indicates that nonsurgical treatment of periodontal disease in pregnant women prior to 21 weeks of gestation did not significantly affect the risk of premature birth before 37 weeks. Furthermore, we observed no association between periodontal treatment and low birth weight or Apgar scores, indicators of newborn well-being. These findings align with those of the Michalowicz et al. (2006) study, providing further support for the existing body of literature on this topic.
 
 \newpage
 
