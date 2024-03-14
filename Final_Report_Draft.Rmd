@@ -1,0 +1,366 @@
+---
+title: "Obstetrics, Periodontal Therapy and Preterm Birth Risk"
+author: "Katie Baines, Jomel Meeko Manzano, Bowei Zhang"
+date: "2024-03-14"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  word_document: default
+---
+
+\addtocontents{toc}{\protect\setcounter{tocdepth}{-1}}
+
+# Project Title:
+Obstetrics, Periodontal Therapy and Preterm Birth Risk	
+
+# Investigator:
+Ronald G. Thomas, Ph.D
+
+# Primary Analyst:
+Katie Baines,  kbaines@ucsd.edu \
+Jomel Meeko Manzano, jmmanzano@ucsd.edu \
+Bowei Zhang, boz013@ucsd.edu 
+
+\addtocontents{toc}{\protect\setcounter{tocdepth}{2}}
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+```{r, eval = TRUE, echo = FALSE, warning=FALSE, message=FALSE}
+# libraries
+#survival
+library(MASS)
+library(tidyverse)
+library(caret)
+library(gtsummary)
+library(GGally)
+library(survival)
+library(survminer)
+library(mice)
+library(ggfortify)
+#logistic
+library(medicaldata)  ## contains dataset opt
+library(knitr)
+library(car)
+library(logistf)
+
+```
+
+## Introduction
+
+  Over the past 15 years, the rate of preterm births, births before 37 weeks of gestation, has been increasing. Infants born prematurely and at low-birth-weights have a higher risk of behavioral disorders, neurodevelopmental disabilities, and death. Previous studies have found that periodontitis is associated with premature birth and low-birth-weight. Periodontal disease is an inflammatory gum disease caused by build-up of bacteria in the mouth that damages connective tissues and bone. Michalowicz et al. (2006) conducted the Obstetrics and Periodontal Therapy (OPT) Study to investigate whether women who underwent nonsurgical treatment of periodontal disease during pregnancy would have decreased risk of premature delivery and low-birth-weights.
+  
+  The study enrolled pregnant women 16 years or older, who were 13 to 17 weeks of gestation and had been screened to have periodontal disease with a prespecified severity of destruction of tooth-supporting connective tissue and alveolar bone. The nonsurgical treatment consisted of scaling and rooting, as well as monthly tooth polishing and instructions on hygiene. Of the women in the treatment group (n = 413) who received treatment before 21 weeks of pregnancy, 50 (12%) experienced preterm birth. Of the control group (n = 410), who received treatment after their pregnancy, 53 (13%) experienced preterm birth. 
+  
+  The original dataset comprises 823 observations and 171 variables. As mentioned, this dataset represents a randomized clinical trial, tracking patients from March 2003 to June 2005. It includes demographic information such as age, race, and education, along with medical conditions like diabetes, hypertension, and eating disorders. Additionally, it incorporates dental status indicators, such as the number of natural teeth, qualifying teeth, and the percentage of tooth sites that bled on probing. These dental status variables are relevant to the focus of the study, which is periodontal disease.
+  
+```{r, echo = F, eval = T, message=F, warning=F}
+opt_raw = opt
+
+opt_baseline = opt_raw %>%
+  rename(
+    ended_37_wk = Preg.ended...37.wk
+  ) %>%
+  # turn space to NA in ended_37_wk
+  select(
+    # Outcome
+    ended_37_wk, GA.at.outcome, Birthweight, Apgar5, 
+    # Treatment
+    Group,
+    # Clinics
+    Clinic,
+    # demographic
+    Age, White, Black, Hisp, Education, Prev.preg, 
+    # Coexisting medical condition
+    Diabetes, Hypertension, Drug.Add, Use.Alc, Use.Tob, # eating disorder
+    # dental status ?
+    ## missing number of natural teeth
+    N.qualifying.teeth, BL..BOP, BL.PD.avg
+    #
+  ) %>%
+   mutate(across(where(is.factor), ~na_if(as.character(.), "   ")))
+
+```
+
+```{r, echo = F, eval = T, message=F, warning=F}
+# Note: The format is good in HTML but odd in pdf
+baseline_table = tbl_summary(opt_baseline, by = Group, missing = "no",
+                             label = list(
+                               ended_37_wk ~ "Whether Ended Before 37 Weeks",
+                               GA.at.outcome ~ "Gestational Age at End of Pregnancy (day)",
+                               Hisp ~ "Hispanic",
+                               Drug.Add ~ "Drug Addiction",
+                               Use.Alc ~ "Alcohol Use",
+                               Use.Tob ~ "Tobacco Use",
+                               N.qualifying.teeth ~ "Number of Qualifying Teeth",
+                               BL..BOP ~ "Percent of tooth sites that bled on probing",
+                               BL.PD.avg ~ "Whole-mouth average pocket depth (mm)"
+                             ))
+add_p(baseline_table, pvalue_fun = function(x) style_pvalue(x, digits = 2))
+```
+
+```{r, echo = F, eval = T, message=F, warning=F}
+# load and clean data
+
+# raw
+opt_raw = opt
+
+#survival dataset
+opt_survival = opt_raw %>%
+  # turn space to NA in ended_37_wk
+   mutate(across(where(is.factor), ~na_if(as.character(.), "   "))) %>%
+  rename(
+    ended_37_wk = Preg.ended...37.wk,
+    time = GA.at.outcome
+  ) %>%
+  mutate(
+    status = ifelse(is.na(ended_37_wk), 0, 1)
+  ) %>%
+  select(
+    # Outcome
+    time, status,
+    # Treatment
+    Group,
+    # Center
+    Clinic,
+    # demographic
+    Age, White, Black, Hisp, Education, Prev.preg, 
+    # Coexisting medical condition
+    Diabetes, Hypertension, Drug.Add, Use.Alc, Use.Tob, # eating disorder
+    # dental status ?
+    ## missing number of natural teeth
+    N.qualifying.teeth, BL..BOP, BL.PD.avg
+    #
+  ) %>%
+  mutate_if(is.character, as.factor)
+
+#logistic regression
+opt_logistic <- opt_raw %>%
+  # turn space to NA in ended_37_wk
+  mutate(
+    cat_birthweight = factor(ifelse(Birthweight < 2500, 0, 1), 
+                             levels = c(0, 1)),
+    across(where(is.factor), ~na_if(as.character(.), "   "))
+  ) %>%
+  select(
+    # Outcome
+    Preg.ended...37.wk, cat_birthweight,
+    # Center
+    Clinic,
+    # demographic
+    Age, White, Black, Hisp, Education, Prev.preg, 
+    # Coexisting medical condition
+    Diabetes, Hypertension, Drug.Add, Use.Alc, Use.Tob, # eating disorder
+    # dental status ?
+    ## missing number of natural teeth
+    N.qualifying.teeth, BL..BOP, BL.PD.avg
+  )  %>%
+  mutate_if(is.character, as.factor)
+```
+
+
+```{r, echo = F, eval = T, message=F, warning=F, include = F}
+## imputation 
+imputation = mice(
+  opt_survival,
+  m = 10,
+  maxit = 10,
+  seed = 1,
+  method = "pmm"
+)
+opt_survival = complete(imputation,1)
+```
+
+## Methods
+
+  The primary outcome is the gestational age at the end of the pregnancy, with birth weight and the Apgar 5 score as secondary outcomes. Our main goal is to replicate the analysis conducted in the Michalowiez paper, employing a proportional hazards model with gestational age censored at 37 weeks (259 days). Our second goal utilizes a logistic regression model to find association with a child's birth weight with predictors. We also use linear regression to model association with Apgar 5-minute score, which tells the health care provider how well the baby is doing outside the mother's womb, with predictors. 
+  
+  Among the covariates, there were 140 participants missing ‘hispanic’, 1 missing ‘alcohol use’, 1 missing ‘drug addiction’, and 26 participants missing multiple of these variables. To address this, Multiple Imputation by Chained Equations was used from the MICE package in R. In regard to missing outcomes, for the survival analysis, the outcome variable was censored at the 37 week gestation mark. For our secondary analysis using logistic regression, we removed the 42 rows containing missing outcomes, leaving us a remaining 782 participants for the analysis. 
+
+## Results
+
+### Survival Analysis
+
+  Similarly to Michalowicz et al. (2006), we created a Kaplan-Meier curve to visualize the difference between the time to end of pregnancy censored at 37 weeks of gestation between the treatment and control arms. However, to better see the difference between groups, we added 95% confidence intervals to the plot. In Figure 1, we can see that the confidence intervals are overlapping, suggesting no difference between groups. To quantify this, a log-rank test was performed resulting in a p-value = 0.9, allowing us to reject the null hypothesis and conclude that there is no difference in distributions of time to event between groups. 
+  
+  To look closer at the association between certain predictors and the hazard of experiencing a preterm birth, we fit a Cox proportional hazards model. The model indicated that women from the Heppepin Country enrollment center had a significantly lower hazard of preterm birth than women enrolled at the University of Kentucky center, University of Mississippi Medical Center, and the Harlem Hospital center (p-value < 0.007). Women that were previously pregnant have an increased hazard of preterm birth by a factor of 1.24 (95% CI: 1.039, 1.472) for each additional day of gestation (p-value = 0.017). Women that had diabetes have an increased hazard of preterm birth by a factor of 2.24 (95% CI: 1.467, 3.429) for each additional day of gestation (p-value < 0.001). Women that had hypertension have an increased hazard of preterm birth by a factor of 2.11 (95% CI: 1.385, 3.202) for each additional day of gestation (p-value < 0.001). 
+  
+```{r, echo = FALSE, warning = FALSE,  fig.cap= "Kaplan-Meier Curve of treatment and control groups", fig.align='center',out.width= "80%"}
+fit.km = survfit(Surv(time, status) ~ Group, data = opt_survival, conf.type = "log-log")
+
+ggsurvplot(
+  fit = fit.km,
+  xlab = "Gestational Age (day)",
+  ylab = "Cumulative Percent of Patients",
+  conf.int = T,
+  censor = T,
+  risk.table = T,
+  xlim = c(103, 259),
+  ylim = c(0.85, 1),
+  break.x.by = 20,
+  tables.height = 0.3,
+  pval = T
+)
+```
+
+```{r, eval = TRUE, echo = FALSE}
+fml = as.formula(
+  paste0(
+    "Surv(time, status) ~ Group + Clinic + ", 
+    # demographic
+    "Age + White + Black + Hisp + Education + Prev.preg +",
+    # Coexisting medical condition
+    "Diabetes + Hypertension + Drug.Add + Use.Alc + Use.Tob +",
+    # dental status 
+    "N.qualifying.teeth + BL..BOP + BL.PD.avg"
+  )
+)
+opt_survival$Clinic = relevel(opt_survival$Clinic, ref = "MN") 
+fit.cox = coxph(formula = fml, data = opt_survival)
+s.fit.cox = summary(fit.cox)
+```
+
+\newpage
+
+Table 1. Cox proportional hazards model summary
+```{r, eval=TRUE, echo=FALSE}
+s.fit.cox$coefficients %>%
+  round(2) %>%
+  knitr::kable()
+```
+
+\newpage
+
+### Logistic and Linear Regression
+
+In our secondary analysis, we aimed to explore the relationship between infant birth weight at the end of the gestation period and various covariates. To achieve this, we constructed logistic regression models with a binary outcome variable distinguishing between normal and low birth weight (< 2500 g). We also developed another logistic regression model excluding variables related to drug, alcohol, and tobacco use due to their potential moderating effects. Additionally, we investigated the association between Apgar 5 scores (ranging from 0-10) and other covariates using linear regression models, with and without the aforementioned variables. A likelihood ratio test indicated that both the simplified logistic regression and linear regression models provided a better fit, prompting us to select these parsimonious models.
+
+Analysis of the logistic regression model revealed that women with hypertension had increased odds, with a factor of 5.3 (95% CI: 1.896, 14.054), of having an infant with low birth weight (p-value < 0.001). From the linear regression model, it was found that women enrolled at the University of Mississippi Medical Center and Harlem Hospital were more likely to have higher Apgar 5 scores compared to those enrolled at the Hennepin County center (p-value < 0.005). Additionally, infants born to Black women had, on average, Apgar 5 scores 0.43 points lower (95% CI: -0.705, -0.134) than infants born to non-Black women (p-value = 0.004). Infants born to women with diabetes scored 0.043 points lower (95% CI: -0.819, -0.051) on Apgar 5 compared to infants born to women without diabetes (p-value = 0.026). Furthermore, women with hypertension tended to score, on average, 0.39 points lower (95% CI: -0.773, -0.020) compared to women without hypertension (p-value = 0.039). It is noteworthy that for both birthweight and Apgar 5 scores, there was no significant difference between groups, consistent with findings from the Michalowicz paper.
+
+
+```{r, echo = FALSE}
+# data cleaning for logistic and linear regression 
+opt_logistic <- opt_raw %>%
+  # turn space to NA in ended_37_wk
+  mutate(
+    cat_birthweight = factor(ifelse(Birthweight > 2500, 0, 1), 
+                             levels = c(0, 1)),
+    across(where(is.factor), ~na_if(as.character(.), "   "))
+  ) %>%
+  select(
+    # Outcome
+    Apgar5, cat_birthweight, Group,
+    # Center
+    Clinic,
+    # demographic
+    Age, White, Black, Hisp, Education, Prev.preg, 
+    # Coexisting medical condition
+    Diabetes, Hypertension, Drug.Add, Use.Alc, Use.Tob, # eating disorder
+    # dental status ?
+    ## missing number of natural teeth
+    N.qualifying.teeth, BL..BOP, BL.PD.avg
+  )  %>%
+  mutate_if(is.character, as.factor)
+```
+
+```{r, echo = F, eval = T, message=F, warning=F, include = F}
+### Missing data
+
+colSums(is.na(opt_logistic))/nrow(opt_logistic)
+
+opt_logistic = opt_logistic %>%
+  # delete missing outcomes
+  filter(!is.na(Apgar5) & !is.na(cat_birthweight))
+
+imputation = mice(
+  opt_logistic,
+  m = 10,
+  maxit = 10,
+  seed = 1,
+  method = "pmm"
+)
+opt_logistic = complete(imputation,1)
+```
+
+
+```{r, eval = TRUE, echo=FALSE}
+
+### Secondary logistic regression birth weight 
+
+# --- Full model --- 
+opt_logistic$cat_birthweight <- as.factor(opt_logistic$cat_birthweight)
+
+model.birthweight <- glm(cat_birthweight ~ . - Apgar5, 
+                         data = opt_logistic, family = binomial, 
+                         na.action = na.exclude)
+```
+
+Table 2. Logistic regression summary output with birth weight as a binary variable.
+
+```{r, warning = FALSE, message=FALSE, echo = FALSE}
+# Table of coefficients from reduced birthweight model
+bw.summary <- summary(model.birthweight)
+
+
+# Table of coefficients from reduced model
+bwtable <- cbind(exp(bw.summary$coefficients[,1]), bw.summary$coefficients[,2], exp(confint(model.birthweight)), bw.summary$coefficients[,4])
+colnames(bwtable) <- c("Estimates", "Std. Error ", "2.5%", "97.5%", "P(>|z|)")
+kable(round(bwtable,2))
+```
+
+
+```{r, echo=FALSE, eval = TRUE, warning=FALSE}
+
+### Secondary analysis
+## Linear regression with Apgar 5
+
+# --- Fit Base Model ---
+  
+model.apgar5 <- lm(Apgar5 ~ . - cat_birthweight, 
+                     data = opt_logistic, 
+          family = gaussian, na.action = na.exclude)
+apgar5.summary = summary(model.apgar5)
+```
+
+Table 3. Linear regression model summary using Apgar 5 score as outcome.
+
+```{r, echo = FALSE}
+# Table of coefficients from reduced model
+table <- cbind(apgar5.summary$coefficients[,1], 
+               apgar5.summary$coefficients[,2], 
+               confint(model.apgar5), 
+               apgar5.summary$coefficients[,4])
+colnames(table) <- c("Estimates", "Std. Error ", "2.5%", "97.5%", "P(>|z|)")
+kable(round(table,2))
+```
+
+## Conclusion
+
+It was found that the nonsurgical treatment of periodontal disease in pregnant women before 21 weeks of gestation did not significantly alter the risk of premature birth before 37 weeks. It was also found that periodontal treatment is not associated with low-birth rates or Apgar scores indicating the well-being of a newborn. These results are consistent with the results found in the Michalowicz et al. (2006) study.
+
+\newpage
+
+# References
+
+https://www.mayoclinic.org/diseases-conditions/periodontitis/symptoms-causes/syc-20354473
+Martin JA, Hamilton BE, Sutton PD, Ventura SJ, Menacker F, Munson ML. Births: final data for
+2003. Natl Vital Stat Rep 2005;54:1-116.
+
+Michalowicz BS, Hodges JS, DiAngelis AJ, Lupo VR, Novak MJ, Ferguson JE, Buchanan W,
+Bofill J, Papapanou PN, Mitchell DA, Matseoane S, Tschida PA; OPT Study. Treatment of
+periodontal disease and the risk of preterm birth. N Engl J Med. 2006 Nov 2;355(18):1885-94.
+doi: 10.1056/NEJMoa062249. PMID: 17079762.
+
+\newpage
+
+# Appendix
+
+## Code
+
+```{r, ref.label = knitr::all_labels(), echo = T, eval = F}
+
+```
