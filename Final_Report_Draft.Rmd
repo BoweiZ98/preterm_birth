@@ -47,6 +47,7 @@ library(medicaldata)  ## contains dataset opt
 library(knitr)
 library(car)
 library(logistf)
+library(generalhoslem)
 
 ```
 
@@ -237,7 +238,7 @@ s.fit.cox$coefficients %>%
 
 ### Logistic and Linear Regression
 
-In our secondary analysis, we aimed to explore the relationship between infant birth weight at the end of the gestation period and various covariates. To achieve this, we constructed logistic regression models with a binary outcome variable distinguishing between normal and low birth weight (< 2500 g). We also developed another logistic regression model excluding variables related to drug, alcohol, and tobacco use due to their potential moderating effects. Additionally, we investigated the association between Apgar 5 scores (ranging from 0-10) and other covariates using linear regression models, with and without the aforementioned variables. A likelihood ratio test indicated that both the simplified logistic regression and linear regression models provided a better fit, prompting us to select these parsimonious models.
+In our secondary analysis, we aimed to explore the relationship between infant birth weight at the end of the gestation period and various covariates. To achieve this, we constructed logistic regression models with a binary outcome variable distinguishing between normal and low birth weight (< 2500 g). We also developed another logistic regression model excluding variables related to drug, alcohol, and tobacco use due to their potential moderating effects. Additionally, we investigated the association between Apgar 5 scores (ranging from 0-10) and other covariates using linear regression models, with and without the aforementioned variables. A likelihood ratio test indicated that both the simplified logistic regression and linear regression models provided a better fit, prompting us to select these parsimonious models. Lastly, we ran a Hosmer-Lemeshow Test on our logistic regression where we concluded that our model is a good fit. 
 
 Analysis of the logistic regression model revealed that women with hypertension had increased odds, with a factor of 5.3 (95% CI: 1.896, 14.054), of having an infant with low birth weight (p-value < 0.001). From the linear regression model, it was found that women enrolled at the University of Mississippi Medical Center and Harlem Hospital were more likely to have higher Apgar 5 scores compared to those enrolled at the Hennepin County center (p-value < 0.005). Additionally, infants born to Black women had, on average, Apgar 5 scores 0.43 points lower (95% CI: -0.705, -0.134) than infants born to non-Black women (p-value = 0.004). Infants born to women with diabetes scored 0.043 points lower (95% CI: -0.819, -0.051) on Apgar 5 compared to infants born to women without diabetes (p-value = 0.026). Furthermore, women with hypertension tended to score, on average, 0.39 points lower (95% CI: -0.773, -0.020) compared to women without hypertension (p-value = 0.039). It is noteworthy that for both birthweight and Apgar 5 scores, there was no significant difference between groups, consistent with findings from the Michalowicz paper.
 
@@ -298,6 +299,16 @@ model.birthweight <- glm(cat_birthweight ~ . - Apgar5,
                          data = opt_logistic, family = binomial, 
                          na.action = na.exclude)
 ```
+
+Goodness of Fit Test 
+```{r,echo=FALSE}
+
+generalhoslem::logitgof(opt_logistic$cat_birthweight,
+                       model.birthweight$fitted.values)
+
+
+```
+
 
 Table 2. Logistic regression summary output with birth weight as a binary variable.
 
