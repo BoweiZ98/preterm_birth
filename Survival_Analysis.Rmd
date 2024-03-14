@@ -92,7 +92,7 @@ ggsurvplot(
   ylim = c(0.85, 1),
   break.x.by = 20,
   tables.height = 0.3,
-  pval = T
+  pval = TRUE
 )
 ```
 
