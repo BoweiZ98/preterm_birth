@@ -357,6 +357,8 @@ In conclusion, our analysis indicates that nonsurgical treatment of periodontal 
 
 # References
 
+Hughes MM, Black RE, Katz J. 2500-g Low Birth Weight Cutoff: History and Implications for Future Research and Policy. Matern Child Health J. 2017 Feb;21(2):283-289. doi: 10.1007/s10995-016-2131-9. PMID: 27449779; PMCID: PMC5290050.
+
 https://www.mayoclinic.org/diseases-conditions/periodontitis/symptoms-causes/syc-20354473
 Martin JA, Hamilton BE, Sutton PD, Ventura SJ, Menacker F, Munson ML. Births: final data for
 2003. Natl Vital Stat Rep 2005;54:1-116.
